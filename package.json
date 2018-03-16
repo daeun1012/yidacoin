@@ -1,0 +1,13 @@
+{
+  "name": "yidacoin",
+  "version": "1.0.0",
+  "description": "Yida Coin, The first coin made in NodeJS",
+  "main": "src/server.js",
+  "repository": "https://github.com/daeun1012/yidacoin.git",
+  "author": "yida daeun9294@gmail.com",
+  "license": "MIT",
+  "private": false,
+  "dependencies": {
+    "crypto-js": "^3.1.9-1"
+  }
+}
