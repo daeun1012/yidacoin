@@ -22,10 +22,10 @@ const genesisBlock = new Block(
 let blockchain = [genesisBlock];
 
 // 마지막 블럭 index 가져오기
-const getLastBlock = () => blockchain(blockchain.length - 1);
+const getLastBlock = () => blockchain[blockchain.length - 1];
 
 // timestamp 가져오기
-const getTimestamp = () => new Date().getTime() / 1000;
+const getTimestamp = () => new Date().getTime();
 
 const getBlockchain = () => blockchain;
 
@@ -135,7 +135,7 @@ const replaceChain = candidateChain => {
 };
 
 // block을 새로운 체인에 등록
-const addBlockToChain = candidateChain => {
+const addBlockToChain = candidateBlock => {
   if(isNewBlockValid(candidateBlock, getLastBlock())) {
     getBlockchain().push(candidateBlock);
     return true;
