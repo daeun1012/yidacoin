@@ -127,7 +127,10 @@ const handleBlockchainResponse = receivedBlocks => {
 	const newestBlock = getNewestBlock();
 	if(newestBlock.hash === latestBlockReceived.previousHash) {
 		// 한 블럭 차이
-		addBlockToChain(latestBlockReceived);
+		if(addBlockToChain(latestBlockReceived)) {
+		    // 블럭이 추가되면 broadcast
+            broadcastNewBlock();
+        }
 	} else if(receivedBlocks.length === 1) {
 		// 한개의 블럭밖에 없다면, 모든 블럭 추가
 		sendMessageToAll(getAll());
@@ -148,6 +151,9 @@ const responseLatest = () => blockchainResponse([getNewestBlock()]);
 
 // 블럭체인 리턴
 const responseAll = () => blockchainResponse(getBlockchain());
+
+// 모든 soket 연결에게 최근 블럭을 broadcast
+const broadcastNewBlock = () => sendMessageToAll(responseLatest());
 
 // 에러 핸들링
 const handleSocketError = ws => {
@@ -171,5 +177,6 @@ const connectToPeers = newPeer => {
 
 module.exports = {
 	startP2PServer,
-	connectToPeers
+	connectToPeers,
+    broadcastNewBlock
 };

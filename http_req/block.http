@@ -6,7 +6,7 @@ Content-Type: application/json
 POST http://localhost:3000/blocks
 Content-Type: application/json
 
-{  "data": "second block" }
+{  "data": "new block" }
 
 ###
 
