@@ -2,10 +2,12 @@ const express = require("express"),
 	bodyParser = require("body-parser"),
 	morgan = require("morgan"),
 	Blockchain = require("./blockchain"),
-	P2P = require("./p2p");
+	P2P = require("./p2p"),
+	Wallet = require("./wallet");
 
 const { getBlockchain, createNewBlock } = Blockchain;
 const { startP2PServer, connectToPeers } = P2P;
+const { initWallet } = Wallet;
 
 const PORT = process.env.HTTP_PORT || 3000;
 
@@ -39,4 +41,5 @@ const server = app.listen(PORT, () =>
 
 // websocket 과 http 는 같은 포트에서 실행 가능
 // 프로토콜이 다르며 충돌하지 않음
+initWallet();
 startP2PServer(server);
