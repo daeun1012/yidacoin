@@ -1,9 +1,11 @@
 const CryptoJS = require("crypto-js"),
+    _ = require("lodash"),
 	elliptic = require("elliptic"),
 	utils = require("./utils");
 
 const ec = new elliptic.ec("secp256k1");
 
+// transaction miner 에게 주어지는 보상
 const COINBASE_AMOUNT = 50;
 
 class TxOut {
@@ -35,9 +37,6 @@ class UTxOut {
 	}
 }
 
-// unspent outputs
-let uTxOuts = [];
-
 // transaction id 생성
 const getTxId = tx => {
 	const txInContent = tx.txIns.map(txIn => txIn.txOutId + txIn.txOutIndex).reduce((a, b) => a + b, "");
@@ -51,35 +50,48 @@ const findUTxOut = (txOutId, txOutIndex, uTxOutList) => {
 };
 
 // transaction input signing
-const signTxIn = (tx, txInIndex, privateKey, uTxOut) => {
+const signTxIn = (tx, txInIndex, privateKey, uTxOutList) => {
 	const txIn = tx.txIns[txInIndex];
 	const dataToSign = tx.id;
-	const referencedUTxOut = findUTxOut(txIn.txOutId, txIn.txOutIndex, uTxOuts);
+	const referencedUTxOut = findUTxOut(txIn.txOutId, txIn.txOutIndex, uTxOutList);
 	if(referencedUTxOut === null) {
+	    console.log("Could not find the referenced uTxOut, not signing");
     	return;
 	}
 
+    // owner 확인
+	const referencedAddress = referencedUTxOut.address;
+    if(getPublicKey(privateKey) !== referencedAddress) {
+        return false;
+    }
 	const key = ec.keyFromPrivate(privateKey, "hex");
 	const signature = utils.toHexString(key.sign(dataToSign).toDER());
 	return signature;
 };
 
-const updateUTxOuts = (newTx, uTxOutList) => {
-    const newTxOuts = newTx.map(tx => {
-        tx.txOuts.map(
-            (txOut, index) => {
-                new UTxOut(tx.txOutId, index, txOut.address, txOut.amount);
-            }
-        )
-    }).reduce((a, b) => a.concat(b), []);
+// public key 가져오기
+const getPublicKey = (privateKey) => {
+    return ec.keyFromPrivate(privateKey, "hex").getPublic().encode("hex");
+};
 
-    // unspent out 소비 (unspent -> spent ( making new outputs ) )
-    const spentTxOuts = newTx.map(tx => tx.txIns)
+// utxos 갱신
+const updateUTxOuts = (newTxs, uTxOutList) => {
+    const newUTxOuts = newTxs
+        .map(tx =>
+            tx.txOuts.map(
+                (txOut, index) => new UTxOut(tx.id, index, txOut.address, txOut.amount)
+            )
+        )
+        .reduce((a, b) => a.concat(b), []);
+
+    const spentTxOuts = newTxs
+        .map(tx => tx.txIns)
         .reduce((a, b) => a.concat(b), [])
         .map(txIn => new UTxOut(txIn.txOutId, txIn.txOutIndex, "", 0));
 
-    const resultingUTxOuts = uTxOutList.filter(uTxO => !findUTxOut(uTxO.txOutId, uTxO.txOutIndex, spentTxOuts)).concat(newUTxOuts);
-
+    const resultingUTxOuts = uTxOutList
+        .filter(uTxO => !findUTxOut(uTxO.txOutId, uTxO.txOutIndex, spentTxOuts))
+        .concat(newUTxOuts);
     return resultingUTxOuts;
 };
 
@@ -218,4 +230,70 @@ const validateCoinbaseTx = (tx, blockIndex) => {
     } else {
         return true;
     }
+};
+
+// miner 가 채굴하는 transaction 생성
+const createCoinbaseTx = (address, blockIndex) => {
+    const tx = new Transaction();
+    const txIn = new TxIn();
+    txIn.signature = "";
+    txIn.txOutId = "";
+    txIn.txOutIndex = blockIndex;
+    tx.txIns = [txIn];
+    tx.txOuts = [new TxOut(address, COINBASE_AMOUNT)];
+    tx.id = getTxId(tx);
+    return tx;
+};
+
+// 중복 검사
+const hasDuplicates = (txIns) => {
+    const groups = _.countBy(txIns, txIn => txIn.txOutId + txIn.txOutIndex);
+    return _(groups).map(value => {
+        if(value > 1) {
+            // 중복 존재
+            console.log("Found a duplicated txIn");
+            return true;
+        } else {
+            return false;
+        }
+    }).includes(true);
+};
+
+// transaction 유효성 검사
+const validateBlockTxs = (txs, uTxOutList, blockIndex) => {
+    const coinbaseTx = txs[0];
+    if(!validateCoinbaseTx(coinbaseTx, blockIndex)) {
+        console.log("Coinbase transaction is not valid");
+        return false;
+    }
+
+    const txIns = _(txs).map(tx => tx.txIns).flatten().value();
+
+    if(hasDuplicates(txIns)) {
+        return false;
+    }
+
+    const nonCoinbaseTxs = txs.slice(1);
+
+    return nonCoinbaseTxs.map(tx => validateTx(tx, uTxOutList)).reduce((a, b) => a + b, true);
+};
+
+// transaction 처리
+const processTxs = (txs, uTxOutList, blockIndex) => {
+    if(!validateBlockTxs(txs, uTxOutList, blockIndex)) {
+        return null;
+    }
+
+    return updateUTxOuts(txs, uTxOutList);
+};
+
+module.exports = {
+    getPublicKey,
+    getTxId,
+    signTxIn,
+    TxIn,
+    Transaction,
+    TxOut,
+    createCoinbaseTx,
+    processTxs
 };

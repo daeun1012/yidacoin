@@ -1,10 +1,16 @@
 const CryptoJS = require("crypto-js"),
+	Wallet = require("./wallet"),
+	Transactions = require("./transactions"),
 	hexToBinary = require("hex-to-binary");
+
+const { getBalance, getPublicFromWallet } = Wallet;
+
+const { createCoinbaseTx, processTxs } = Transactions;
 
 // 블럭 생성 주기 ( 시간 단위 s )
 const BLOCK_GENERATION_INTERVAL = 10 * 1000;
 // 난이도 조절 블럭 주기
-const DIFFICULTY_ADJUSMENT_INTERVAL = 10;
+const DIFFICULTY_ADJUSTMENT_INTERVAL = 10;
 
 class Block {
 	constructor(index, hash, previousHash, timestamp, data, difficulty, nonce) {
@@ -31,6 +37,9 @@ const genesisBlock = new Block(
 
 let blockchain = [genesisBlock];
 
+// unspent outputs
+let uTxOuts = [];
+
 // 마지막 블럭 index 가져오기
 const getNewestBlock = () => blockchain[blockchain.length - 1];
 
@@ -44,8 +53,15 @@ const getBlockchain = () => blockchain;
 const createHash  = (index, previousHash, timestamp, data, difficulty, nonce) =>
 	CryptoJS.SHA256(index + previousHash + timestamp + JSON.stringify(data) + difficulty + nonce).toString();
 
+// 새로운 블럭 생성 (coinbase)
+const createNewBlock = () => {
+	const coinbaseTx = createCoinbaseTx(getPublicFromWallet(), getNewestBlock().index + 1);
+	const blockData = [coinbaseTx];
+	return createNewRawBlock(blockData);
+};
+
 // 새로운 블럭 생성
-const createNewBlock = data => {
+const createNewRawBlock = data => {
 	// 이전 블럭 (마지막 블럭)
 	const previousBlock  = getNewestBlock();
 	// 새로운 블럭의 index
@@ -72,7 +88,7 @@ const createNewBlock = data => {
 const findDifficulty = () => {
 	const newestBlock = getNewestBlock();
 	if (
-		newestBlock.index % DIFFICULTY_ADJUSMENT_INTERVAL === 0 &&
+		newestBlock.index % DIFFICULTY_ADJUSTMENT_INTERVAL === 0 &&
         newestBlock.index !== 0
 	) {
 		return calculateNewDifficulty(newestBlock, getBlockchain());
@@ -84,9 +100,9 @@ const findDifficulty = () => {
 // 난이도 계산하기
 const calculateNewDifficulty = (newestBlock, blockchain) => {
 	const lastCalculatedBlock =
-        blockchain[blockchain.length - DIFFICULTY_ADJUSMENT_INTERVAL];
+        blockchain[blockchain.length - DIFFICULTY_ADJUSTMENT_INTERVAL];
 	const timeExpected =
-        BLOCK_GENERATION_INTERVAL * DIFFICULTY_ADJUSMENT_INTERVAL;
+        BLOCK_GENERATION_INTERVAL * DIFFICULTY_ADJUSTMENT_INTERVAL;
 	const timeTaken = newestBlock.timestamp - lastCalculatedBlock.timestamp;
 	if (timeTaken < timeExpected / 2) {
 		return lastCalculatedBlock.difficulty + 1;
@@ -180,7 +196,7 @@ const isBlockStructureValid = block => {
     typeof block.hash === "string" &&
     typeof block.previousHash === "string" &&
     typeof block.timestamp === "number" &&
-    typeof block.data === "string"
+    typeof block.data === "object"
 	);
 };
 
@@ -229,18 +245,29 @@ const replaceChain = candidateChain => {
 // block을 새로운 체인에 등록
 const addBlockToChain = candidateBlock => {
 	if(isBlockValid(candidateBlock, getNewestBlock())) {
-		getBlockchain().push(candidateBlock);
-		return true;
+		const processedTxs = processTxs(candidateBlock.data, uTxOuts, candidateBlock.index);
+
+		if(processedTxs === null) {
+			console.log("Could not process txs");
+			return false;
+		} else {
+            getBlockchain().push(candidateBlock);
+            uTxOuts = processedTxs;
+            return true;
+		}
 	} else {
 		return false;
 	}
 };
 
+const getAccountBalance = () => getBalance(getPublicFromWallet(), uTxOuts);
+
 module.exports = {
 	getBlockchain,
-	createNewBlock,
+    createNewBlock,
 	getNewestBlock,
 	isBlockStructureValid,
 	addBlockToChain,
-	replaceChain
+	replaceChain,
+    getAccountBalance
 };
