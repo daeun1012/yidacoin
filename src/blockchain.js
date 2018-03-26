@@ -225,18 +225,31 @@ const isChainVaild = candidateChain => {
 	if (!isGenesisValid(candidateChain[0])) {
 		// 최초 블럭 불일치
 		console.log("THe candidateChain's genesisBlock is not the same as our genesisBlock");
-		return false;
+		return null;
 	}
+
+	let foreignUTxOuts = [];
 
 	// 모든 블럭 해시 검사
 	// 최초 블럭은 이전 해시가 없기 때문에 index 가 1 부터 시작 ===> 최초 블럭 제외 검사
 	for(let i = 1; i < candidateChain.length; i++) {
-		if(!isBlockValid(candidateChain[i], candidateChain[i - 1])) {
-			return false;
+		const currentBlock = candidateChain[i];
+		if(!isBlockValid(currentBlock, candidateChain[i - 1])) {
+			return null;
+		}
+
+        foreignUTxOuts = processTxs(
+        	currentBlock.data,
+			foreignUTxOuts,
+			currentBlock.index
+		);
+
+		if(foreignUTxOuts === null) {
+			return null;
 		}
 	}
 
-	return true;
+	return foreignUTxOuts;
 };
 
 // 난이도의 합
@@ -248,9 +261,14 @@ const sumDifficulty = anyBlockchain =>
 
 // 검증이 끝난 체인을 받아들임
 const replaceChain = candidateChain => {
+	const foreignUTxOuts = isChainVaild(candidateChain);
+	const validChain = foreignUTxOuts !== null;
 	// chain 유효성 검사 && 난이도의 합이 더 큰 쪽으로 변경
-	if(isChainVaild(candidateChain) && sumDifficulty(candidateChain) > sumDifficulty(getBlockchain())) {
+	if(validChain && sumDifficulty(candidateChain) > sumDifficulty(getBlockchain())) {
 		blockchain = candidateChain;
+		uTxOuts = foreignUTxOuts;
+		updateMempool(uTxOuts);
+		require("./p2p").broadcastNewBlock();
 		return true;
 	} else {
 		return false;
@@ -286,11 +304,12 @@ const getAccountBalance = () => getBalance(getPublicFromWallet(), uTxOuts);
 const sendTx = (address, amount) => {
 	const tx = createTx(address, amount, getPrivateFromWallet(), getUTxOutList(), getMempool());
 	addToMempool(tx, getUTxOutList());
+    require("./p2p").broadcastNewMempool();
 	return tx;
 };
 
 const handleIncomingTx = tx => {
-	addToMempool(tx, getMempool());
+	addToMempool(tx, getUTxOutList());
 };
 
 module.exports = {

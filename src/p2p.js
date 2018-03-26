@@ -43,7 +43,7 @@ const blockchainResponse = data => {
 	};
 };
 
-const getMempool = () => {
+const getAllMempool = () => {
 	return {
 		type: REQUEST_MEMPOOL,
 		data: null
@@ -82,7 +82,7 @@ const initSocketConnection = ws => {
 		console.log(data);
 	});
 	setTimeout(() => {
-	  sendMessage(ws, getMempool());
+	  sendMessage(ws, getAllMempool());
 	}, 1000);
 };
 
@@ -183,7 +183,7 @@ const handleBlockchainResponse = receivedBlocks => {
 };
 
 // memPool return
-const returnMempool = () => mempoolResponse(getMempool());
+const returnMempool = () => mempoolResponse(getAllMempool());
 
 // json 형식으로 메세지 전송
 const sendMessage = (ws, message) => ws.send(JSON.stringify(message));
@@ -199,6 +199,9 @@ const responseAll = () => blockchainResponse(getBlockchain());
 
 // 모든 soket 연결에게 최근 블럭을 broadcast
 const broadcastNewBlock = () => sendMessageToAll(responseLatest());
+
+// 모든 soket 연결에게 최신 mempool broadcast
+const broadcastNewMempool = () => sendMessageToAll(returnMempool());
 
 // 에러 핸들링
 const handleSocketError = ws => {
@@ -223,5 +226,6 @@ const connectToPeers = newPeer => {
 module.exports = {
 	startP2PServer,
 	connectToPeers,
-    broadcastNewBlock
+    broadcastNewBlock,
+    broadcastNewMempool
 };
