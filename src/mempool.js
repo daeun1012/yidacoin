@@ -5,6 +5,8 @@ const { validateTx } = Transactions;
 
 let mempool = [];
 
+const getMempool = () => _.cloneDeep(mempool);
+
 // pool 에 존재하는 transaction input 가져오기
 const getTxInsInPool = mempool => {
     return _(mempool).map(tx => tx.txIns).flatten().value();
@@ -16,10 +18,10 @@ const isTxValidForPool = (tx, mempool) => {
 
     // 이미 pool 에 존재하는지 확인
     const isTxInAlreadyInPool = (txIns, txIn) => {
-        return _.find(txIns, txInsInPool => {
+        return _.find(txIns, txInInPool => {
             return (
-                txIn.txOutIndex === txInsInPool.txOutIndex &&
-                txIn.txOutId === txInsInPool.txOutId
+                txIn.txOutIndex === txInInPool.txOutIndex &&
+                txIn.txOutId === txInInPool.txOutId
             );
         });
     };
@@ -34,6 +36,30 @@ const isTxValidForPool = (tx, mempool) => {
     return true;
 };
 
+// transaction intput 에 포함되어 있다면 (채굴 완료된 transaction 이라면)
+const hasTxIn = (txIn, uTxOUtList) => {
+    const foundTxIn = uTxOUtList.find(uTxOut => uTxOut.txOutId === txIn.txOutId && uTxOut.txOutIndex === txIn.txOutIndex);
+    return foundTxIn !== undefined;
+};
+
+// memPool 갱신
+const updateMempool = uTxOutList => {
+    const invalidTxs = [];
+    for(const tx of mempool) {
+        for(const txIn of tx.txIns) {
+            if(!hasTxIn(txIn, uTxOutList)) {
+                // 채굴 완료된 transaction
+                invalidTxs.push(tx);
+                break;
+            }
+        }
+    }
+
+    if(invalidTxs.length > 0) {
+        mempool = _.without(mempool, ...invalidTxs);
+    }
+};
+
 // memPool 에 추가
 const addToMempool = (tx, uTxOutList) => {
     if(!validateTx(tx, uTxOutList)) {
@@ -46,5 +72,7 @@ const addToMempool = (tx, uTxOutList) => {
 };
 
 module.exports = {
-    addToMempool
+    addToMempool,
+    getMempool,
+    updateMempool
 };

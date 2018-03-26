@@ -9,7 +9,7 @@ const { getBalance, getPublicFromWallet, getPrivateFromWallet, createTx } = Wall
 
 const { createCoinbaseTx, processTxs } = Transactions;
 
-const { addToMempool } = Mempool;
+const { addToMempool, getMempool, updateMempool } = Mempool;
 
 // 블럭 생성 주기 ( 시간 단위 s )
 const BLOCK_GENERATION_INTERVAL = 10 * 1000;
@@ -60,7 +60,7 @@ const createHash  = (index, previousHash, timestamp, data, difficulty, nonce) =>
 // 새로운 블럭 생성 (coinbase)
 const createNewBlock = () => {
 	const coinbaseTx = createCoinbaseTx(getPublicFromWallet(), getNewestBlock().index + 1);
-	const blockData = [coinbaseTx];
+	const blockData = [coinbaseTx].concat(getMempool());
 	return createNewRawBlock(blockData);
 };
 
@@ -255,8 +255,9 @@ const addBlockToChain = candidateBlock => {
 			console.log("Could not process txs");
 			return false;
 		} else {
-            getBlockchain().push(candidateBlock);
+            blockchain.push(candidateBlock);
             uTxOuts = processedTxs;
+            updateMempool(uTxOuts);
             return true;
 		}
 	} else {
@@ -272,7 +273,7 @@ const getAccountBalance = () => getBalance(getPublicFromWallet(), uTxOuts);
 
 // transaction 보내기 ( mempool)
 const sendTx = (address, amount) => {
-	const tx = createTx(address, amount, getPrivateFromWallet(), getUTxOutList());
+	const tx = createTx(address, amount, getPrivateFromWallet(), getUTxOutList(), getMempool());
 	addToMempool(tx, getUTxOutList());
 	return tx;
 };
