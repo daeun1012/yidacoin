@@ -289,6 +289,10 @@ const sendTx = (address, amount) => {
 	return tx;
 };
 
+const handleIncomingTx = tx => {
+	addToMempool(tx, getMempool());
+};
+
 module.exports = {
 	getBlockchain,
     createNewBlock,
@@ -297,5 +301,6 @@ module.exports = {
 	addBlockToChain,
 	replaceChain,
     getAccountBalance,
-    sendTx
+    sendTx,
+    handleIncomingTx
 };
