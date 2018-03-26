@@ -1,7 +1,11 @@
 node_modules
 .log
+<<<<<<< HEAD
 /.idea
 .iml
 src/privateKey
+package-lock.json
+yarn.lock
+yarn-error.log
 
-# git rm --cached -r .idea
+# git rm --cached -r .idea\
