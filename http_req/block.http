@@ -6,8 +6,6 @@ Content-Type: application/json
 POST http://localhost:3000/blocks
 Content-Type: application/json
 
-{  "data": "new block" }
-
 ###
 
 POST http://localhost:3000/peers
@@ -21,3 +19,29 @@ GET http://localhost:4000/blocks
 Content-Type: application/json
 
 ###
+
+GET http://localhost:3000/me/balance
+Content-Type: application/json
+
+###
+
+GET http://localhost:3000/me/address
+Content-Type: application/json
+
+###
+
+GET http://localhost:3000/transactions
+Content-Type: application/json
+
+###
+
+POST http://localhost:3000/transactions
+Content-Type: application/json
+
+{
+    "amount": 12,
+    "address": "04572b97060884228ad8ad8dc5183e9a705a4ac12a1bdbe4c46994245b4d4ed3c34fb393e1e96a206185c37cace2957f93417d5666b85ed76fbec20b6715f93f08"
+}
+
+###
+

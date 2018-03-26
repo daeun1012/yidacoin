@@ -2,10 +2,14 @@ const express = require("express"),
 	bodyParser = require("body-parser"),
 	morgan = require("morgan"),
 	Blockchain = require("./blockchain"),
-	P2P = require("./p2p");
+	P2P = require("./p2p"),
+    Mempool = require("./mempool"),
+	Wallet = require("./wallet");
 
-const { getBlockchain, createNewBlock } = Blockchain;
+const { getBlockchain, createNewBlock, getAccountBalance, sendTx } = Blockchain;
 const { startP2PServer, connectToPeers } = P2P;
+const { initWallet, getPublicFromWallet } = Wallet;
+const { getMempool } = Mempool;
 
 const PORT = process.env.HTTP_PORT || 3000;
 
@@ -13,17 +17,15 @@ const app = express();
 app.use(bodyParser.json());
 app.use(morgan("combined"));
 
-// 블럭 조회
-app.get("/blocks", (req, res) => {
-	res.send(getBlockchain());
-});
-
-// 새로운 블럭 생성 ( mining )
-app.post("/blocks", (req, res) => {
-	const { body: { data } } = req;
-	const newBlock = createNewBlock(data);
-	res.send(newBlock);
-});
+app.route("/blocks")
+	.get((req, res) => {
+        // 블럭 조회
+		res.send(getBlockchain());
+	})
+	.post((req, res) => {
+		const newBlock = createNewBlock();
+		res.send(newBlock);
+	});
 
 // p2p 소켓 연결
 app.post("/peers", (req, res) => {
@@ -32,6 +34,33 @@ app.post("/peers", (req, res) => {
 	res.send();
 });
 
+app.get("/me/balance", (req, res) => {
+	const balance = getAccountBalance();
+	res.send({ balance });
+});
+
+app.get("/me/address", (req, res) => {
+	res.send(getPublicFromWallet());
+});
+
+app.route("/transactions")
+	.get((req, res) => {
+        res.send(getMempool());
+	})
+	.post((req, res) => {
+		try {
+            const { body: { address, amount } } = req;
+			if(address === undefined || amount === undefined) {
+				throw Error("Please specify address and an amount");
+			} else {
+				const resPonse = sendTx(address, amount);
+				res.send(resPonse);
+			}
+		} catch (e) {
+			res.status(501).send(e.message);
+		}
+	});
+
 // http 서버 구동
 const server = app.listen(PORT, () =>
 	console.log(`Yidacoin Server running on ${PORT}`)
@@ -39,4 +68,5 @@ const server = app.listen(PORT, () =>
 
 // websocket 과 http 는 같은 포트에서 실행 가능
 // 프로토콜이 다르며 충돌하지 않음
+initWallet();
 startP2PServer(server);

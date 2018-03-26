@@ -2,5 +2,6 @@ node_modules
 .log
 /.idea
 .iml
+src/privateKey
 
 # git rm --cached -r .idea

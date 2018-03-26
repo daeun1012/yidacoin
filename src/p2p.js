@@ -1,4 +1,5 @@
 const WebSockets = require("ws"),
+	Mempool = require("./mempool"),
 	Blockchain = require("./blockchain");
 
 const {
@@ -9,12 +10,16 @@ const {
 	addBlockToChain,
 } = Blockchain;
 
+const { getMempool, handleIncomingTx } = Mempool;
+
 const sockets = [];
 
 // Messages Types
 const GET_LATEST = "GET_LATEST";
 const GET_ALL = "GET_ALL";
 const BLOCKCHAIN_RESPONSE = "BLOCKCHAIN_RESPONSE";
+const REQUEST_MEMPOOL = "REQUEST_MEMPOOL";
+const MEMPOOL_RESPONSE = "MEMPOOL_RESPONSE";
 
 // Message Creators
 const getLastest = () => {
@@ -38,14 +43,31 @@ const blockchainResponse = data => {
 	};
 };
 
+const getMempool = () => {
+	return {
+		type: REQUEST_MEMPOOL,
+		data: null
+	};
+};
+
+const mempoolResponse = data => {
+	return {
+		type: MEMPOOL_RESPONSE,
+		data
+	};
+};
+
 // p2p Server 시작
 const startP2PServer = server => {
 	const wsServer = new WebSockets.Server({ server });
 	wsServer.on("connection", ws => {
 		initSocketConnection(ws);
-		handleSocketMessages(ws);
-		handleSocketError(ws);
-		sendMessage(ws, getLastest());
+        // handleSocketMessages(ws);
+        // handleSocketError(ws);
+        // sendMessage(ws, getLastest());
+	});
+	wsServer.on("error", () => {
+		console.log("error");
 	});
 	console.log("Yidacoin P2P Server Running!");
 };
@@ -55,12 +77,13 @@ const initSocketConnection = ws => {
 	sockets.push(ws);
 	handleSocketMessages(ws);
 	handleSocketError(ws);
+    sendMessage(ws, getLatest());
 	ws.on("message", data => {
 		console.log(data);
 	});
-	// setTimeout(() => {
-	//   ws.send("welcome!");
-	// }, 5000);
+	setTimeout(() => {
+	  sendMessage(ws, getMempool());
+	}, 1000);
 };
 
 // JSON 형식의 데이터인지 확인
@@ -85,26 +108,45 @@ const handleSocketMessages = ws => {
 		console.log(message);
 
 		switch(message.type) {
-		case GET_LATEST:
-			sendMessage(ws, responseLatest());
-			break;
+            case GET_LATEST:
+                sendMessage(ws, responseLatest());
+                break;
 
-		case GET_ALL:
-			sendMessage(ws, responseAll());
-			break;
+            case GET_ALL:
+                sendMessage(ws, responseAll());
+                break;
 
-		case BLOCKCHAIN_RESPONSE:
-			const receivedBlocks = message.data;
+            case BLOCKCHAIN_RESPONSE:
+                const receivedBlocks = message.data;
 
-			// null 체크
-			if (receivedBlocks === null) {
-				console.log("The receivedBlocks is null");
+                // null 체크
+                if (receivedBlocks === null) {
+                    console.log("The receivedBlocks is null");
+                    break;
+                }
+
+                handleBlockchainResponse(receivedBlocks);
+                break;
+
+			case REQUEST_MEMPOOL:
+				sendMessage(ws, returnMempool());
+                break;
+
+			case MEMPOOL_RESPONSE:
+				const receivedTxs = message.data;
+				if(receivedTxs == null) {
+					return;
+				}
+
+				receivedTxs.forEach(tx => {
+					try {
+                        handleIncomingTx(tx);
+					} catch (e) {
+						console.log(e);
+					}
+				});
 				break;
-			}
-
-			handleBlockchainResponse(receivedBlocks);
-			break;
-		}
+        }
 	});
 };
 
@@ -139,6 +181,9 @@ const handleBlockchainResponse = receivedBlocks => {
 		replaceChain(receivedBlocks);
 	}
 };
+
+// memPool return
+const returnMempool = () => mempoolResponse(getMempool());
 
 // json 형식으로 메세지 전송
 const sendMessage = (ws, message) => ws.send(JSON.stringify(message));
