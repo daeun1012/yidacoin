@@ -2,6 +2,7 @@ const express = require("express"),
 	bodyParser = require("body-parser"),
 	morgan = require("morgan"),
 	Blockchain = require("./blockchain"),
+	Transactions = require("./transactions"),
 	P2P = require("./p2p"),
     Mempool = require("./mempool"),
 	Wallet = require("./wallet");

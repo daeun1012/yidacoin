@@ -28,13 +28,24 @@ class Block {
 	}
 }
 
+const genesisTx = {
+	txIns: [{signature: "", txOutId: "", txOutIndex: 0}],
+	txOuts: [
+		{
+            address: "04572b97060884228ad8ad8dc5183e9a705a4ac12a1bdbe4c46994245b4d4ed3c34fb393e1e96a206185c37cace2957f93417d5666b85ed76fbec20b6715f93f07",
+			amount: 50
+		}
+	],
+	id: "1e1c18a7e5702d5bf07c88a541b2a3bf0eb72733aa40bec1dbcef6417338b324"
+};
+
 // 최초 블록
 const genesisBlock = new Block(
 	0,
-	"E4FC1B06F01D2BACAFF97D534F284C0618897B64D4CB36EF28582A26A2C6921F",
+	"f9e59d93e732ce891aa0b87d636388f198d11ccb1dbabd62ad25796dd76377d2",
 	null,
 	1521168884757,
-	"This is the genesis!!",
+	[genesisTx],
 	0,
 	0
 );
@@ -42,7 +53,7 @@ const genesisBlock = new Block(
 let blockchain = [genesisBlock];
 
 // unspent outputs
-let uTxOuts = [];
+let uTxOuts = processTxs(blockchain[0].data, [], 0);
 
 // 마지막 블럭 index 가져오기
 const getNewestBlock = () => blockchain[blockchain.length - 1];
