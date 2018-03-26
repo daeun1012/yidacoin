@@ -25,6 +25,11 @@ Content-Type: application/json
 
 ###
 
+GET http://localhost:3000/me/address
+Content-Type: application/json
+
+###
+
 GET http://localhost:3000/transactions
 Content-Type: application/json
 
