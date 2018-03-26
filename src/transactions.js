@@ -173,7 +173,8 @@ const isTxStructureValid = tx => {
 // transaction input 검사
 const validateTxIn = (txIn, tx, uTxOutList) => {
     const wantedTxOut = uTxOutList.find(uTxOut => uTxOut.txOutId === txIn.txOutId && uTxOut.txOutIndex === txIn.txOutIndex);
-    if(wantedTxOut === null) {
+    if(wantedTxOut === undefined) {
+        console.log(`Didn't find the wanted uTxOut, the tx: ${tx} is invalid`);
         return false;
     } else {
         // signing 확인
@@ -183,32 +184,36 @@ const validateTxIn = (txIn, tx, uTxOutList) => {
     }
 };
 
-const getAmountInTxIn = (txIn, uTxOutList) => findUTxOut(txIn.txOutId, txIn.txOutId, uTxOutList).amount;
-
+// const getAmountInTxIn = (txIn, uTxOutList) => findUTxOut(txIn.txOutId, txIn.txOutIndex, uTxOutList) === undefined ? 0 : findUTxOut(txIn.txOutId, txIn.txOutIndex, uTxOutList).amount;
+const getAmountInTxIn = (txIn, uTxOutList) => findUTxOut(txIn.txOutId, txIn.txOutIndex, uTxOutList).amount;
 
 // transaction 유효성 검사
 const validateTx = (tx, uTxOutList) => {
 
     if(!isTxStructureValid(tx)) {
+        console.log("Tx structure is invalid");
         return false;
     }
 
     if(getTxId(tx) !== tx.id) {
+        console.log("Tx ID is not valid");
         return false;
     }
 
     const hasValidTxIns = tx.txIns.map(txIn => validateTxIn(txIn, tx, uTxOutList));
 
     if(!hasValidTxIns) {
+        console.log(`The tx: ${tx} doesn't have valid txIns`);
         return false;
     }
 
     // input, output amount 확인
-    const amountInTxIns = tx.txIns.map(txIn => getAmountInTxIn(txIn, uTxOutList).reduce((a, b) => a + b, 0));
+    const amountInTxIns = tx.txIns.map(txIn => getAmountInTxIn(txIn, uTxOutList)).reduce((a, b) => a + b, 0);
 
     const amountInTxOuts = tx.txOuts.map(txOut => txOut.amount).reduce((a, b) => a + b, 0);
 
     if(amountInTxIns !== amountInTxOuts) {
+        console.log(`The tx: ${tx} doesn't have the same amount in the txOut as in the txIns`);
         return false;
     } else {
         return true;
@@ -218,14 +223,19 @@ const validateTx = (tx, uTxOutList) => {
 // coinbase transaction 유효성 검사
 const validateCoinbaseTx = (tx, blockIndex) => {
     if(getTxId(tx) !== tx.id) {
+        console.log("Invalid Coinbase tx ID");
         return false;
     } else if(tx.txIns.length !== 1) {
+        console.log("Coinbase TX should only have one input");
         return false;
     } else if(tx.txIns[0].txOutIndex !== blockIndex) {
+        console.log("The txOutIndex of the Coinbase Tx should be the same as the Block Index");
         return false;
     } else if(tx.txOuts.length !== 1) {
+        console.log("Coinbase TX should only have one output");
         return false;
     } else if(tx.txOuts[0].amount !== COINBASE_AMOUNT) {
+        console.log(`Coinbase TX should have an amount of only ${COINBASE_AMOUNT} and it has ${tx.txOuts[0].amount}`);
         return false;
     } else {
         return true;
@@ -295,5 +305,6 @@ module.exports = {
     Transaction,
     TxOut,
     createCoinbaseTx,
-    processTxs
+    processTxs,
+    validateTx
 };

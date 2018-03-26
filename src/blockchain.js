@@ -1,11 +1,15 @@
 const CryptoJS = require("crypto-js"),
+	_ = require("lodash"),
 	Wallet = require("./wallet"),
+    Mempool = require("./mempool");
 	Transactions = require("./transactions"),
 	hexToBinary = require("hex-to-binary");
 
-const { getBalance, getPublicFromWallet } = Wallet;
+const { getBalance, getPublicFromWallet, getPrivateFromWallet, createTx } = Wallet;
 
 const { createCoinbaseTx, processTxs } = Transactions;
+
+const { addToMempool } = Mempool;
 
 // 블럭 생성 주기 ( 시간 단위 s )
 const BLOCK_GENERATION_INTERVAL = 10 * 1000;
@@ -260,7 +264,18 @@ const addBlockToChain = candidateBlock => {
 	}
 };
 
+// unspent transaction output list 가져오기 (deep copy)
+const getUTxOutList = () => _.cloneDeep(uTxOuts);
+
+// 잔고 가져오기
 const getAccountBalance = () => getBalance(getPublicFromWallet(), uTxOuts);
+
+// transaction 보내기 ( mempool)
+const sendTx = (address, amount) => {
+	const tx = createTx(address, amount, getPrivateFromWallet(), getUTxOutList());
+	addToMempool(tx, getUTxOutList());
+	return tx;
+};
 
 module.exports = {
 	getBlockchain,
@@ -269,5 +284,6 @@ module.exports = {
 	isBlockStructureValid,
 	addBlockToChain,
 	replaceChain,
-    getAccountBalance
+    getAccountBalance,
+    sendTx
 };

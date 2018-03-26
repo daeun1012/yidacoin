@@ -61,12 +61,12 @@ const findAmountInUTxOuts = (amountNeeded, myUTxOuts) => {
         }
     }
 
-    console.log("Not enough founds");
-    return false;
+    throw Error("Not enough founds");
+    // return false;
 };
 
 // transaction output 생성
-const createTxOut = (receiverAddress, myAddress, amount, leftOverAmount) => {
+const createTxOuts = (receiverAddress, myAddress, amount, leftOverAmount) => {
     const receiverTxOut = new TxOut(receiverAddress, amount);
 
     if(leftOverAmount === 0) {
@@ -88,15 +88,16 @@ const createTx = (receiverAddress, amount, privateKey, uTxOutList) => {
         const txIn = new TxIn();
         txIn.txOutId = uTxOut.txOutId;
         txIn.txOutIndex = uTxOut.txOutIndex;
+        return txIn;
     };
 
     // transaction 에 사용할 utxo 를 가지고 옴
-    const unsignnedTxIns = includedUTxOuts.map(toUnsignedTxIn);
+    const unsignedTxIns = includedUTxOuts.map(toUnsignedTxIn);
 
     const tx = new Transaction();
 
-    tx.txIns = unsignnedTxIns;
-    tx.txOuts = createTxOut(receiverAddress, myAddress, amount, leftOverAmount);
+    tx.txIns = unsignedTxIns;
+    tx.txOuts = createTxOuts(receiverAddress, myAddress, amount, leftOverAmount);
     tx.id = getTxId(tx);
 
     // sign inputs
@@ -111,5 +112,7 @@ const createTx = (receiverAddress, amount, privateKey, uTxOutList) => {
 module.exports = {
     initWallet,
     getBalance,
-    getPublicFromWallet
+    getPublicFromWallet,
+    getPrivateFromWallet,
+    createTx
 };
