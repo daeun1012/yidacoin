@@ -2,3 +2,5 @@ node_modules
 .log
 /.idea
 .iml
+
+# git rm --cached -r .idea
