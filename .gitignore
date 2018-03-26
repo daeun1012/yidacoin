@@ -1,6 +1,5 @@
 node_modules
 .log
-<<<<<<< HEAD
 /.idea
 .iml
 src/privateKey
