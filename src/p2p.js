@@ -8,9 +8,10 @@ const {
 	replaceChain,
 	getBlockchain,
 	addBlockToChain,
+    handleIncomingTx
 } = Blockchain;
 
-const { getMempool, handleIncomingTx } = Mempool;
+const { getMempool } = Mempool;
 
 const sockets = [];
 
@@ -22,7 +23,7 @@ const REQUEST_MEMPOOL = "REQUEST_MEMPOOL";
 const MEMPOOL_RESPONSE = "MEMPOOL_RESPONSE";
 
 // Message Creators
-const getLastest = () => {
+const getLatest = () => {
 	return {
 		type: GET_LATEST,
 		data: null
@@ -137,13 +138,13 @@ const handleSocketMessages = ws => {
 				if(receivedTxs == null) {
 					return;
 				}
-
-				receivedTxs.forEach(tx => {
-					try {
+				console.log("receivedTxs : " + JSON.stringify(receivedTxs));
+                receivedTxs.forEach(tx => {
+                    try {
                         handleIncomingTx(tx);
-					} catch (e) {
-						console.log(e);
-					}
+                    } catch (e) {
+                        console.log(e);
+                    }
 				});
 				break;
         }
@@ -183,7 +184,7 @@ const handleBlockchainResponse = receivedBlocks => {
 };
 
 // memPool return
-const returnMempool = () => mempoolResponse(getAllMempool());
+const returnMempool = () => mempoolResponse(getMempool());
 
 // json 형식으로 메세지 전송
 const sendMessage = (ws, message) => ws.send(JSON.stringify(message));

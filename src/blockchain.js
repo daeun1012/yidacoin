@@ -231,10 +231,10 @@ const isChainVaild = candidateChain => {
 	let foreignUTxOuts = [];
 
 	// 모든 블럭 해시 검사
-	// 최초 블럭은 이전 해시가 없기 때문에 index 가 1 부터 시작 ===> 최초 블럭 제외 검사
-	for(let i = 1; i < candidateChain.length; i++) {
+	// 최초 블럭은 이전 해시가 없기 때문에 ===> 최초 블럭 제외 유효성 검사
+	for(let i = 0; i < candidateChain.length; i++) {
 		const currentBlock = candidateChain[i];
-		if(!isBlockValid(currentBlock, candidateChain[i - 1])) {
+		if(i !== 0 && !isBlockValid(currentBlock, candidateChain[i - 1])) {
 			return null;
 		}
 
