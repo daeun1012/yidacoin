@@ -321,5 +321,6 @@ module.exports = {
 	replaceChain,
     getAccountBalance,
     sendTx,
-    handleIncomingTx
+	handleIncomingTx,
+	getUTxOutList
 };

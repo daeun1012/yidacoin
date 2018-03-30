@@ -6,5 +6,6 @@ src/privateKey
 package-lock.json
 yarn.lock
 yarn-error.log
+/.vscode
 
 # git rm --cached -r .idea\
